@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>授業アンケート集計くん v2.0.0</title>
+  <!-- Excel読み込み用ライブラリ (SheetJS) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --bg-sub: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --border: #334155;
+      --danger: #f87171;
+      --success: #34d399;
+      --star: #fbbf24;
+      --admin-badge: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      background-color: var(--bg-sub);
+      padding: 4px 12px;
+      border-radius: 999px;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .badge-admin {
+      background-color: rgba(245, 158, 11, 0.2);
+      border: 1px solid var(--admin-badge);
+      color: var(--admin-badge);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: #0f172a;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+      color: #fff;
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: #0f172a;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-main);
+      color: var(--text-main);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 28px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      margin-bottom: 24px;
+    }
+
+    .card-admin {
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    /* ログイン画面 */
+    .login-box {
+      max-width: 420px;
+      margin: 60px auto;
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 1.4rem;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .form-group input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    .form-group input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .error-msg {
+      color: var(--danger);
+      font-size: 0.88rem;
+      margin-top: 10px;
+      min-height: 1.2em;
+    }
+
+    .status-msg {
+      color: var(--accent);
+      font-size: 0.88rem;
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+
+    .success-msg {
+      color: var(--success);
+      font-size: 0.9rem;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    /* ファイルドロップゾーン */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+      margin-top: 12px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--admin-badge);
+      background-color: rgba(245, 158, 11, 0.08);
+    }
+
+    .drop-zone p {
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-size: 0.88rem;
+    }
+
+    /* 担当授業選択エリア */
+    .selector-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .selector-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 集計結果エリア */
+    .summary-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      background-color: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 24px;
+      margin: 24px 0;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .stat-value.avg {
+      color: var(--star);
+      font-size: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: var(--bg-main);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .score-cell {
+      width: 110px;
+      font-weight: bold;
+      font-size: 1.05rem;
+      color: var(--star);
+      white-space: nowrap;
+    }
+
+    .comment-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.88rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .notice-box {
+      background-color: rgba(56, 189, 248, 0.1);
+      border-left: 4px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📊 授業アンケート集計くん</h1>
+    <div id="headerUserArea" class="user-info hidden">
+      <span id="adminBadge" class="badge-admin hidden">管理者 (admin)</span>
+      <span>ログイン中: <span id="displayTeacherName" class="badge"></span></span>
+      <button type="button" id="logoutBtn" class="btn-outline">ログアウト</button>
+    </div>
+  </header>
+
+  <!-- 1. エントランス（ログイン画面） -->
+  <div id="loginView" class="container">
+    <div class="card login-box">
+      <h2>🔐 教員ログイン</h2>
+      <form id="loginForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="userIdInput">ユーザーID</label>
+          <input type="text" id="userIdInput" autocomplete="username" placeholder="IDを入力してください" />
+        </div>
+        <div class="form-group">
+          <label for="passwordInput">パスワード</label>
+          <input type="password" id="passwordInput" autocomplete="current-password" placeholder="パスワードを入力してください" />
+        </div>
+        <button type="button" id="loginSubmitBtn" class="btn-primary" style="width: 100%;">ログイン</button>
+        <div id="loginStatus" class="status-msg"></div>
+        <div id="loginError" class="error-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. メイン画面 -->
+  <div id="mainView" class="container hidden">
+
+    <!-- 管理者（admin）専用：Excelアップロード＆サーバー保存パネル -->
+    <div id="adminUploadCard" class="card card-admin hidden">
+      <h2 style="color: var(--admin-badge); margin-bottom: 8px;">🛠️ 管理者メニュー：アンケート結果のアップロード・登録</h2>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+        アップロードしたExcelから生徒の個人情報（氏名・ID・メール）を自動削除した上で、クラウド（管理マスター）へ保存します。保存後、全教員が自分の担当分を閲覧できるようになります。
+      </p>
+
+      <div class="form-group" style="max-width: 480px;">
+        <label for="surveyTitleInput">アンケート名称（保存名）</label>
+        <input type="text" id="surveyTitleInput" placeholder="例：2026年度 前期授業アンケート" />
+      </div>
+
+      <div id="dropZone" class="drop-zone">
+        <div style="font-size: 2rem;">📄</div>
+        <strong>Excelファイル（.xlsx）をここにドラッグ＆ドロップ</strong>
+        <p>またはクリックしてファイルを選択してください</p>
+        <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" />
+      </div>
+
+      <div id="parsedPreviewArea" class="hidden" style="margin-top: 16px;">
+        <div id="fileParseStatus" style="font-size: 0.92rem; color: var(--accent); margin-bottom: 12px;"></div>
+        <button type="button" id="uploadSaveBtn" class="btn-success">☁️ この内容でサーバーに保存・公開する</button>
+        <div id="uploadSaveStatus" class="status-msg"></div>
+        <div id="uploadSaveSuccess" class="success-msg"></div>
+        <div id="uploadSaveError" class="error-msg"></div>
+      </div>
+    </div>
+
+    <!-- 全教員共通：担当授業アンケート閲覧パネル -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <h2>📋 担当授業アンケート結果の閲覧</h2>
+        <button type="button" id="reloadDataBtn" class="btn-outline" style="font-size: 0.85rem; padding: 6px 12px;">🔄 最新データを再取得</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
+        ログイン中の教員（<strong id="inlineTeacherName"></strong>）が担当しているクラス・科目の集計結果のみが表示されます。
+      </p>
+
+      <div id="dataLoadStatus" class="status-msg" style="margin-top: 12px;"></div>
+      <div id="noDataMsg" class="error-msg hidden" style="margin-top: 12px;"></div>
+
+      <!-- アンケート回・クラス・科目選択 -->
+      <div id="selectorControls" class="selector-grid hidden">
+        <div class="form-group">
+          <label for="surveySelect">対象アンケート</label>
+          <select id="surveySelect"></select>
+        </div>
+        <div class="form-group">
+          <label for="classSelect">クラス名</label>
+          <select id="classSelect"></select>
+        </div>
+        <div class="form-group">
+          <label for="subjectSelect">科目名</label>
+          <select id="subjectSelect"></select>
+        </div>
+      </div>
+
+      <!-- 集計結果表示 -->
+      <div id="resultArea" class="hidden">
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;" />
+
+        <div class="notice-box">
+          🔒 匿名保護のため、生徒氏名・出席番号などの個人情報は除外し、回答順をランダムにシャッフルした上で点数の高い順に並べ替えています。
+        </div>
+
+        <div class="summary-bar">
+          <div class="stat-item">
+            <span class="stat-label">対象クラス・科目</span>
+            <span id="statTarget" style="font-size: 1.15rem; font-weight: bold;">-</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">有効回答数</span>
+            <span id="statCount" class="stat-value">0 名</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">満足度 平均点（5点満点）</span>
+            <span id="statAvg" class="stat-value avg">-</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>満足度（点数）</th>
+              <th>授業に対するコメント</th>
+            </tr>
+          </thead>
+          <tbody id="resultTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // 設定：デプロイしたGASのウェブアプリURL
+    // ==========================================
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxpm3hnXuxGyvyH32bWQ3OMIEt9H1udrA3xa_zz8xkiDMfmdqwZfAT8zFpKv8YzmRbE/exec';
+
+    // セッション情報
+    let sessionAuth = {
+      userId: '',
+      password: '',
+      teacherName: '',
+      role: 'user'
+    };
+
+    // 管理者アップロード用一時解析レコード
+    let stagedRecords = [];
+
+    // 閲覧用データ（GASから取得したログイン教員の担当分のみ）
+    // mySurveys[surveyTitle][className][subjectName] = [{ score, comment }, ...]
+    let mySurveys = {};
+
+    // DOM要素
+    const loginView = document.getElementById('loginView');
+    const mainView = document.getElementById('mainView');
+    const headerUserArea = document.getElementById('headerUserArea');
+    const adminBadge = document.getElementById('adminBadge');
+    const displayTeacherName = document.getElementById('displayTeacherName');
+    const inlineTeacherName = document.getElementById('inlineTeacherName');
+    const userIdInput = document.getElementById('userIdInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const loginStatus = document.getElementById('loginStatus');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // 管理者DOM
+    const adminUploadCard = document.getElementById('adminUploadCard');
+    const surveyTitleInput = document.getElementById('surveyTitleInput');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const parsedPreviewArea = document.getElementById('parsedPreviewArea');
+    const fileParseStatus = document.getElementById('fileParseStatus');
+    const uploadSaveBtn = document.getElementById('uploadSaveBtn');
+    const uploadSaveStatus = document.getElementById('uploadSaveStatus');
+    const uploadSaveSuccess = document.getElementById('uploadSaveSuccess');
+    const uploadSaveError = document.getElementById('uploadSaveError');
+
+    // 閲覧DOM
+    const reloadDataBtn = document.getElementById('reloadDataBtn');
+    const dataLoadStatus = document.getElementById('dataLoadStatus');
+    const noDataMsg = document.getElementById('noDataMsg');
+    const selectorControls = document.getElementById('selectorControls');
+    const surveySelect = document.getElementById('surveySelect');
+    const classSelect = document.getElementById('classSelect');
+    const subjectSelect = document.getElementById('subjectSelect');
+
+    const resultArea = document.getElementById('resultArea');
+    const statTarget = document.getElementById('statTarget');
+    const statCount = document.getElementById('statCount');
+    const statAvg = document.getElementById('statAvg');
+    const resultTableBody = document.getElementById('resultTableBody');
+
+    // ==========================================
+    // 1. ログイン処理
+    // ==========================================
+    async function callGas(payload) {
+      const res = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('サーバー応答の解析に失敗しました（GASの新バージョン再デプロイをご確認ください）。');
+      }
+    }
+
+    async function executeLogin() {
+      loginError.textContent = '';
+      loginStatus.textContent = '';
+
+      const userId = userIdInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!userId || !password) {
+        loginError.textContent = 'ユーザーIDとパスワードの両方を入力してください。';
+        return;
+      }
+
+      loginSubmitBtn.disabled = true;
+      loginSubmitBtn.textContent = '認証中...';
+      loginStatus.textContent = '認証サーバーへ接続しています...';
+
+      try {
+        const result = await callGas({ action: 'login', userId, password });
+        if (result.status === 'success') {
+          sessionAuth = {
+            userId: userId,
+            password: password,
+            teacherName: result.teacherName,
+            role: result.role || 'user'
+          };
+          loginStatus.textContent = '';
+          enterMainScreen();
+        } else {
+          loginStatus.textContent = '';
+          loginError.textContent = result.message || 'ログインに失敗しました。';
+        }
+      } catch (err) {
+        loginStatus.textContent = '';
+        loginError.textContent = 'エラー: ' + err.message;
+      } finally {
+        loginSubmitBtn.disabled = false;
+        loginSubmitBtn.textContent = 'ログイン';
+      }
+    }
+
+    loginSubmitBtn.addEventListener('click', executeLogin);
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeLogin();
+      }
+    });
+    userIdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        passwordInput.focus();
+      }
+    });
+
+    function enterMainScreen() {
+      loginView.classList.add('hidden');
+      mainView.classList.remove('hidden');
+      headerUserArea.classList.remove('hidden');
+
+      const label = sessionAuth.teacherName.endsWith('先生')
+        ? sessionAuth.teacherName
+        : sessionAuth.teacherName + '先生';
+      displayTeacherName.textContent = label;
+      inlineTeacherName.textContent = label;
+
+      // 権限による画面切り替え（adminのみアップロードカードを表示）
+      if (sessionAuth.role === 'admin') {
+        adminBadge.classList.remove('hidden');
+        adminUploadCard.classList.remove('hidden');
+      } else {
+        adminBadge.classList.add('hidden');
+        adminUploadCard.classList.add('hidden');
+      }
+
+      // サーバーから自分の担当データを自動取得
+      fetchMySurveyData();
+    }
+
+    logoutBtn.addEventListener('click', () => {
+      sessionAuth = { userId: '', password: '', teacherName: '', role: 'user' };
+      stagedRecords = [];
+      mySurveys = {};
+      passwordInput.value = '';
+      loginError.textContent = '';
+      loginStatus.textContent = '';
+      parsedPreviewArea.classList.add('hidden');
+      selectorControls.classList.add('hidden');
+      resultArea.classList.add('hidden');
+      headerUserArea.classList.add('hidden');
+      adminUploadCard.classList.add('hidden');
+      mainView.classList.add('hidden');
+      loginView.classList.remove('hidden');
+    });
+
+    // ==========================================
+    // 2. 管理者専用：Excel解析＆サーバー保存処理
+    // ==========================================
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        handleExcelFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleExcelFile(e.target.files[0]);
+      }
+    });
+
+    function extractTeachersFromParen(parenText) {
+      return parenText
+        .split(/[\s ・、,]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+        .map(s => (s.endsWith('先生') ? s : s + '先生'));
+    }
+
+    function handleExcelFile(file) {
+      if (typeof XLSX === 'undefined') {
+        alert('Excel解析ライブラリ(SheetJS)が読み込まれていません。');
+        return;
+      }
+
+      // ファイル名から拡張子を除いたものをデフォルトのアンケート名にセット（未入力時）
+      if (!surveyTitleInput.value.trim()) {
+        surveyTitleInput.value = file.name.replace(/\.[^/.]+$/, '');
+      }
+
+      uploadSaveSuccess.textContent = '';
+      uploadSaveError.textContent = '';
+      uploadSaveStatus.textContent = '';
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          stagedRecords = parseWorkbookToFlatRecords(workbook);
+
+          const classCount = new Set(stagedRecords.map(r => r.cls)).size;
+          parsedPreviewArea.classList.remove('hidden');
+          fileParseStatus.textContent = `✅ 解析完了: ${file.name}（全 ${classCount} クラス ／ 匿名回答データ ${stagedRecords.length} 件抽出済み）`;
+        } catch (err) {
+          alert('Excelファイルの解析に失敗しました: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ワークブックを個人情報なしのフラットレコード配列へ変換
+    function parseWorkbookToFlatRecords(workbook) {
+      const records = [];
+
+      workbook.SheetNames.forEach((sheetName) => {
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!rows || rows.length < 2) return;
+
+        const headers = rows[0].map(h => String(h || '').trim());
+        const usedSubjectNames = new Set();
+        let pendingSatisfaction = null;
+
+        for (let col = 0; col < headers.length; col++) {
+          const h = headers[col];
+          if (!h) continue;
+          if (
+            h.startsWith('点数 - ') ||
+            h.startsWith('フィードバック - ') ||
+            ['ID', '開始時刻', '完了時刻', 'メール', '名前', '合計点数', 'クイズのフィードバック', '最終変更時刻'].includes(h) ||
+            h.includes('どちらを選択')
+          ) {
+            continue;
+          }
+
+          if (h.includes('授業満足度')) {
+            const match = h.match(/^(.+?)(?:（(.+?)）|\((.+?)\))?の授業満足度/);
+            if (match) {
+              const subjName = match[1].trim();
+              const rawTeachers = match[2] || match[3] || '';
+              pendingSatisfaction = {
+                colIndex: col,
+                subjectName: subjName,
+                teachers: rawTeachers ? extractTeachersFromParen(rawTeachers) : []
+              };
+            }
+          } else if (h.includes('コメント') && pendingSatisfaction) {
+            const cMatch = h.match(/^(.+?)(?:（(.+?)）|\((.+?)\))?の授業に対するコメント/);
+            let teachers = pendingSatisfaction.teachers;
+            if (teachers.length === 0 && cMatch && (cMatch[2] || cMatch[3])) {
+              teachers = extractTeachersFromParen(cMatch[2] || cMatch[3]);
+            }
+
+            const teachersJoined = teachers.join('・');
+            let displaySubject = pendingSatisfaction.subjectName;
+            if (usedSubjectNames.has(displaySubject)) {
+              displaySubject = `${displaySubject}（${teachersJoined}）`;
+            }
+            usedSubjectNames.add(displaySubject);
+
+            for (let r = 1; r < rows.length; r++) {
+              const rawScore = rows[r][pendingSatisfaction.colIndex];
+              const rawComment = String(rows[r][col] || '').trim();
+              const numScore = Number(rawScore);
+
+              if (rawScore !== '' && !isNaN(numScore) && numScore >= 1 && numScore <= 5) {
+                records.push({
+                  cls: sheetName,
+                  subj: displaySubject,
+                  teachers: teachersJoined,
+                  score: numScore,
+                  comment: rawComment
+                });
+              }
+            }
+            pendingSatisfaction = null;
+          }
+        }
+      });
+
+      return records;
+    }
+
+    uploadSaveBtn.addEventListener('click', async () => {
+      uploadSaveSuccess.textContent = '';
+      uploadSaveError.textContent = '';
+
+      const surveyTitle = surveyTitleInput.value.trim();
+      if (!surveyTitle) {
+        uploadSaveError.textContent = 'アンケート名称を入力してください。';
+        return;
+      }
+      if (stagedRecords.length === 0) {
+        uploadSaveError.textContent = '有効なアンケートデータが見つかりません。';
+        return;
+      }
+
+      uploadSaveBtn.disabled = true;
+      uploadSaveStatus.textContent = 'サーバーへデータを送信・保存しています（数秒かかります）...';
+
+      try {
+        const res = await callGas({
+          action: 'uploadData',
+          userId: sessionAuth.userId,
+          password: sessionAuth.password,
+          surveyTitle: surveyTitle,
+          records: stagedRecords
+        });
+
+        uploadSaveStatus.textContent = '';
+        if (res.status === 'success') {
+          uploadSaveSuccess.textContent = '🎉 ' + res.message;
+          // 保存完了後、自身の閲覧リストも最新に更新
+          await fetchMySurveyData();
+        } else {
+          uploadSaveError.textContent = res.message || '保存に失敗しました。';
+        }
+      } catch (err) {
+        uploadSaveStatus.textContent = '';
+        uploadSaveError.textContent = '通信エラー: ' + err.message;
+      } finally {
+        uploadSaveBtn.disabled = false;
+      }
+    });
+
+    // ==========================================
+    // 3. サーバーから自分の担当アンケートを取得・表示
+    // ==========================================
+    reloadDataBtn.addEventListener('click', fetchMySurveyData);
+
+    async function fetchMySurveyData() {
+      noDataMsg.classList.add('hidden');
+      dataLoadStatus.textContent = 'サーバーから担当授業のアンケートデータを取得しています...';
+
+      try {
+        const res = await callGas({
+          action: 'getMyData',
+          userId: sessionAuth.userId,
+          password: sessionAuth.password
+        });
+
+        dataLoadStatus.textContent = '';
+        if (res.status !== 'success') {
+          noDataMsg.textContent = res.message || 'データの取得に失敗しました。';
+          noDataMsg.classList.remove('hidden');
+          return;
+        }
+
+        mySurveys = res.surveys || {};
+        const availableSurveys = Object.keys(mySurveys);
+
+        if (availableSurveys.length === 0) {
+          selectorControls.classList.add('hidden');
+          resultArea.classList.add('hidden');
+          noDataMsg.textContent = '現在閲覧できる担当授業のアンケートデータがありません。（管理者のアップロード待ち、または担当授業の一致データなし）';
+          noDataMsg.classList.remove('hidden');
+          return;
+        }
+
+        // アンケート選択プルダウン構築（最新登録順に表示）
+        surveySelect.innerHTML = '';
+        availableSurveys.reverse().forEach((title) => {
+          const opt = document.createElement('option');
+          opt.value = title;
+          opt.textContent = title;
+          surveySelect.appendChild(opt);
+        });
+
+        selectorControls.classList.remove('hidden');
+        updateClassOptions();
+
+      } catch (err) {
+        dataLoadStatus.textContent = '';
+        noDataMsg.textContent = '通信エラー: ' + err.message;
+        noDataMsg.classList.remove('hidden');
+      }
+    }
+
+    function updateClassOptions() {
+      const selectedSurvey = surveySelect.value;
+      const classesObj = mySurveys[selectedSurvey] || {};
+      const classNames = Object.keys(classesObj);
+
+      classSelect.innerHTML = '';
+      classNames.forEach((cls) => {
+        const opt = document.createElement('option');
+        opt.value = cls;
+        opt.textContent = cls;
+        classSelect.appendChild(opt);
+      });
+
+      updateSubjectOptions();
+    }
+
+    function updateSubjectOptions() {
+      const selectedSurvey = surveySelect.value;
+      const selectedClass = classSelect.value;
+      const subjectsObj = (mySurveys[selectedSurvey] && mySurveys[selectedSurvey][selectedClass]) || {};
+      const subjectNames = Object.keys(subjectsObj);
+
+      subjectSelect.innerHTML = '';
+      subjectNames.forEach((subj) => {
+        const opt = document.createElement('option');
+        opt.value = subj;
+        opt.textContent = subj;
+        subjectSelect.appendChild(opt);
+      });
+
+      renderResults();
+    }
+
+    surveySelect.addEventListener('change', updateClassOptions);
+    classSelect.addEventListener('change', updateSubjectOptions);
+    subjectSelect.addEventListener('change', renderResults);
+
+    // ==========================================
+    // 4. 匿名シャッフル ＋ 点数降順ソート ＆ 描画
+    // ==========================================
+    function shuffleArray(array) {
+      const arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function renderResults() {
+      const sTitle = surveySelect.value;
+      const cls = classSelect.value;
+      const subj = subjectSelect.value;
+
+      if (!sTitle || !cls || !subj || !mySurveys[sTitle] || !mySurveys[sTitle][cls] || !mySurveys[sTitle][cls][subj]) {
+        resultArea.classList.add('hidden');
+        return;
+      }
+
+      const rawResponses = mySurveys[sTitle][cls][subj];
+      const shuffled = shuffleArray(rawResponses);
+      const sorted = shuffled.sort((a, b) => b.score - a.score);
+
+      const count = sorted.length;
+      const sum = sorted.reduce((acc, item) => acc + item.score, 0);
+      const avg = count > 0 ? (sum / count).toFixed(2) : '-';
+
+      statTarget.textContent = `${cls} ／ ${subj}`;
+      statCount.textContent = `${count} 名`;
+      statAvg.textContent = count > 0 ? `${avg} 点` : '-';
+
+      resultTableBody.innerHTML = '';
+      sorted.forEach((item, index) => {
+        const tr = document.createElement('tr');
+
+        const tdNo = document.createElement('td');
+        tdNo.textContent = index + 1;
+
+        const tdScore = document.createElement('td');
+        tdScore.className = 'score-cell';
+        tdScore.textContent = `★ ${item.score}`;
+
+        const tdComment = document.createElement('td');
+        if (item.comment) {
+          tdComment.textContent = item.comment;
+        } else {
+          tdComment.innerHTML = '<span class="comment-empty">（コメントなし）</span>';
+        }
+
+        tr.appendChild(tdNo);
+        tr.appendChild(tdScore);
+        tr.appendChild(tdComment);
+        resultTableBody.appendChild(tr);
+      });
+
+      resultArea.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
