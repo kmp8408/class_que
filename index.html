@@ -3,23 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>授業アンケート集計くん v2.0.0</title>
+  <title>授業アンケート集計くん v3.0.0</title>
   <!-- Excel読み込み用ライブラリ (SheetJS) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
-      --bg-main: #0f172a;
-      --bg-card: #1e293b;
-      --bg-sub: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent: #38bdf8;
-      --accent-hover: #0284c7;
-      --border: #334155;
-      --danger: #f87171;
-      --success: #34d399;
-      --star: #fbbf24;
-      --admin-badge: #f59e0b;
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-sub: #f8fafc;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --accent-light: #e0f2fe;
+      --border: #cbd5e1;
+      --border-light: #e2e8f0;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --success: #059669;
+      --success-light: #d1fae5;
+      --star: #d97706;
+      --star-bg: #fef3c7;
+      --admin0-color: #7c3aed;
+      --admin0-bg: #ede9fe;
+      --admin1-color: #d97706;
+      --admin1-bg: #fef3c7;
+      --admin2-color: #0d9488;
+      --admin2-bg: #ccfbf1;
     }
 
     * {
@@ -45,6 +55,10 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 12px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
 
     header h1 {
@@ -60,24 +74,52 @@
       align-items: center;
       gap: 10px;
       font-size: 0.9rem;
+      flex-wrap: wrap;
     }
 
-    .badge {
-      background-color: var(--bg-sub);
-      padding: 4px 12px;
-      border-radius: 999px;
+    .teacher-btn {
+      background-color: var(--accent-light);
       color: var(--accent);
+      border: 1px solid #bae6fd;
+      padding: 5px 14px;
+      border-radius: 999px;
       font-weight: bold;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
 
-    .badge-admin {
-      background-color: rgba(245, 158, 11, 0.2);
-      border: 1px solid var(--admin-badge);
-      color: var(--admin-badge);
-      padding: 2px 10px;
+    .teacher-btn:hover {
+      background-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .role-badge {
+      padding: 3px 10px;
       border-radius: 999px;
       font-size: 0.78rem;
       font-weight: bold;
+    }
+
+    .role-admin0 {
+      background-color: var(--admin0-bg);
+      color: var(--admin0-color);
+      border: 1px solid #c4b5fd;
+    }
+
+    .role-admin1 {
+      background-color: var(--admin1-bg);
+      color: var(--admin1-color);
+      border: 1px solid #fcd34d;
+    }
+
+    .role-admin2 {
+      background-color: var(--admin2-bg);
+      color: var(--admin2-color);
+      border: 1px solid #5eead4;
     }
 
     button {
@@ -85,9 +127,13 @@
       border: none;
       border-radius: 6px;
       padding: 8px 16px;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: bold;
-      transition: background-color 0.2s, opacity 0.2s;
+      transition: background-color 0.2s, opacity 0.2s, transform 0.05s;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
     }
 
     button:disabled {
@@ -97,38 +143,86 @@
 
     .btn-primary {
       background-color: var(--accent);
-      color: #0f172a;
+      color: #ffffff;
     }
 
     .btn-primary:hover:not(:disabled) {
       background-color: var(--accent-hover);
-      color: #fff;
     }
 
     .btn-success {
       background-color: var(--success);
-      color: #0f172a;
+      color: #ffffff;
     }
 
     .btn-success:hover:not(:disabled) {
-      opacity: 0.9;
+      background-color: #047857;
+    }
+
+    .btn-danger {
+      background-color: var(--danger-light);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+      padding: 5px 10px;
+      font-size: 0.82rem;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: var(--danger);
+      color: #ffffff;
     }
 
     .btn-outline {
-      background-color: transparent;
+      background-color: #ffffff;
       border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-
-    .btn-outline:hover {
-      border-color: var(--text-main);
       color: var(--text-main);
     }
 
-    .container {
-      max-width: 1000px;
-      margin: 28px auto;
+    .btn-outline:hover {
+      background-color: var(--bg-sub);
+      border-color: var(--text-muted);
+    }
+
+    /* ナビゲーションタブ */
+    .nav-tabs {
+      max-width: 1120px;
+      margin: 20px auto 0;
       padding: 0 20px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background-color: #e2e8f0;
+      color: var(--text-muted);
+      padding: 10px 20px;
+      border-radius: 8px 8px 0 0;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      border-bottom: none;
+    }
+
+    .tab-btn:hover {
+      background-color: #cbd5e1;
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background-color: var(--bg-card);
+      color: var(--accent);
+      border-color: var(--border);
+      box-shadow: 0 -2px 6px rgba(15, 23, 42, 0.03);
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+    }
+
+    .container.no-tabs {
+      margin-top: 28px;
     }
 
     .card {
@@ -136,12 +230,22 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 28px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
       margin-bottom: 24px;
     }
 
+    .card.tabbed-card {
+      border-top-left-radius: 0;
+    }
+
+    @media (max-width: 640px) {
+      .card.tabbed-card {
+        border-top-left-radius: 12px;
+      }
+    }
+
     .card-admin {
-      border-color: rgba(245, 158, 11, 0.5);
+      border-top: 4px solid var(--admin1-color);
     }
 
     /* ログイン画面 */
@@ -154,6 +258,7 @@
       text-align: center;
       margin-bottom: 24px;
       font-size: 1.4rem;
+      color: var(--text-main);
     }
 
     .form-group {
@@ -163,7 +268,8 @@
     .form-group label {
       display: block;
       margin-bottom: 6px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-weight: bold;
       color: var(--text-muted);
     }
 
@@ -172,14 +278,15 @@
       padding: 10px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
-      background-color: var(--bg-main);
+      background-color: #ffffff;
       color: var(--text-main);
-      font-size: 1rem;
+      font-size: 0.98rem;
     }
 
     .form-group input:focus, select:focus {
       outline: none;
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     }
 
     .error-msg {
@@ -187,6 +294,7 @@
       font-size: 0.88rem;
       margin-top: 10px;
       min-height: 1.2em;
+      font-weight: bold;
     }
 
     .status-msg {
@@ -206,6 +314,7 @@
     /* ファイルドロップゾーン */
     .drop-zone {
       border: 2px dashed var(--border);
+      background-color: var(--bg-sub);
       border-radius: 10px;
       padding: 28px 20px;
       text-align: center;
@@ -215,8 +324,8 @@
     }
 
     .drop-zone:hover, .drop-zone.dragover {
-      border-color: var(--admin-badge);
-      background-color: rgba(245, 158, 11, 0.08);
+      border-color: var(--accent);
+      background-color: var(--accent-light);
     }
 
     .drop-zone p {
@@ -244,11 +353,11 @@
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      background-color: var(--bg-main);
-      border: 1px solid var(--border);
+      background-color: var(--bg-sub);
+      border: 1px solid var(--border-light);
       border-radius: 10px;
       padding: 18px 24px;
-      margin: 24px 0;
+      margin: 20px 0;
       align-items: center;
       justify-content: space-between;
     }
@@ -261,17 +370,53 @@
     .stat-label {
       font-size: 0.8rem;
       color: var(--text-muted);
+      font-weight: bold;
     }
 
     .stat-value {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: bold;
       color: var(--accent);
     }
 
     .stat-value.avg {
       color: var(--star);
-      font-size: 2rem;
+      font-size: 1.9rem;
+    }
+
+    /* 学年別平均カードグリッド */
+    .grade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+
+    .grade-card {
+      background-color: var(--bg-sub);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .grade-card .g-name {
+      font-size: 0.88rem;
+      font-weight: bold;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .grade-card .g-avg {
+      font-size: 1.45rem;
+      font-weight: bold;
+      color: var(--star);
+    }
+
+    .grade-card .g-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
     table {
@@ -282,23 +427,36 @@
 
     th, td {
       padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-light);
       text-align: left;
-      vertical-align: top;
+      vertical-align: middle;
     }
 
     th {
-      background-color: var(--bg-main);
+      background-color: var(--bg-sub);
       color: var(--text-muted);
       font-size: 0.85rem;
       white-space: nowrap;
+      border-top: 1px solid var(--border-light);
     }
 
-    .score-cell {
-      width: 110px;
-      font-weight: bold;
-      font-size: 1.05rem;
+    .clickable-row {
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    .clickable-row:hover {
+      background-color: var(--accent-light);
+    }
+
+    .score-pill {
+      display: inline-block;
+      background-color: var(--star-bg);
       color: var(--star);
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.95rem;
       white-space: nowrap;
     }
 
@@ -313,13 +471,57 @@
     }
 
     .notice-box {
-      background-color: rgba(56, 189, 248, 0.1);
+      background-color: var(--accent-light);
       border-left: 4px solid var(--accent);
       padding: 12px 16px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 0.88rem;
-      color: var(--text-muted);
+      color: var(--text-main);
       margin-bottom: 16px;
+    }
+
+    .admin-viewing-banner {
+      background-color: var(--admin2-bg);
+      border: 1px solid #5eead4;
+      color: #0f766e;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    /* モーダル（パスワード変更用） */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-card {
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+    }
+
+    /* ユーザー管理テーブル内入力欄 */
+    .user-edit-table input, .user-edit-table select {
+      padding: 6px 8px;
+      font-size: 0.88rem;
     }
   </style>
 </head>
@@ -328,14 +530,16 @@
   <header>
     <h1>📊 授業アンケート集計くん</h1>
     <div id="headerUserArea" class="user-info hidden">
-      <span id="adminBadge" class="badge-admin hidden">管理者 (admin)</span>
-      <span>ログイン中: <span id="displayTeacherName" class="badge"></span></span>
+      <span id="roleBadge" class="role-badge hidden"></span>
+      <button type="button" id="openPasswordModalBtn" class="teacher-btn" title="クリックしてパスワードを変更">
+        👤 <span id="displayTeacherName"></span> 🔑
+      </button>
       <button type="button" id="logoutBtn" class="btn-outline">ログアウト</button>
     </div>
   </header>
 
   <!-- 1. エントランス（ログイン画面） -->
-  <div id="loginView" class="container">
+  <div id="loginView" class="container no-tabs">
     <div class="card login-box">
       <h2>🔐 教員ログイン</h2>
       <form id="loginForm" onsubmit="return false;">
@@ -354,102 +558,244 @@
     </div>
   </div>
 
-  <!-- 2. メイン画面 -->
+  <!-- 2. ナビゲーションタブ（ログイン後） -->
+  <div id="navTabs" class="nav-tabs hidden">
+    <button type="button" class="tab-btn active" data-tab="individual">📋 個票閲覧（クラス・科目別）</button>
+    <button type="button" id="tabOverviewBtn" class="tab-btn hidden" data-tab="overview">📈 全アンケート一覧（平均点）</button>
+    <button type="button" id="tabUsersBtn" class="tab-btn hidden" data-tab="users">👥 ユーザー一覧管理</button>
+  </div>
+
+  <!-- 3. メイン画面 -->
   <div id="mainView" class="container hidden">
 
-    <!-- 管理者（admin）専用：Excelアップロード＆サーバー保存パネル -->
-    <div id="adminUploadCard" class="card card-admin hidden">
-      <h2 style="color: var(--admin-badge); margin-bottom: 8px;">🛠️ 管理者メニュー：アンケート結果のアップロード・登録</h2>
-      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-        アップロードしたExcelから生徒の個人情報（氏名・ID・メール）を自動削除した上で、クラウド（管理マスター）へ保存します。保存後、全教員が自分の担当分を閲覧できるようになります。
-      </p>
+    <!-- ========================================== -->
+    <!-- タブ1：個票閲覧 ＋ 管理者アップロード画面 -->
+    <!-- ========================================== -->
+    <div id="tabPanelIndividual">
+      <!-- 管理者（admin0 / admin1）専用：Excelアップロード＆サーバー保存パネル -->
+      <div id="adminUploadCard" class="card card-admin tabbed-card hidden">
+        <h2 style="color: var(--admin1-color); margin-bottom: 8px;">🛠️ データアップロード・登録（管理者メニュー）</h2>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+          Excelから生徒の個人情報（氏名・ID・メール）を自動削除した上でサーバーへ保存します。未登録の教員は「教員マスター」へ自動追加されます。
+        </p>
 
-      <div class="form-group" style="max-width: 480px;">
-        <label for="surveyTitleInput">アンケート名称（保存名）</label>
-        <input type="text" id="surveyTitleInput" placeholder="例：2026年度 前期授業アンケート" />
+        <div class="form-group" style="max-width: 480px;">
+          <label for="surveyTitleInput">アンケート名称（保存名）</label>
+          <input type="text" id="surveyTitleInput" placeholder="例：2026年度 前期授業アンケート" />
+        </div>
+
+        <div id="dropZone" class="drop-zone">
+          <div style="font-size: 2rem;">📄</div>
+          <strong>Excelファイル（.xlsx）をここにドラッグ＆ドロップ</strong>
+          <p>またはクリックしてファイルを選択してください</p>
+          <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" />
+        </div>
+
+        <div id="parsedPreviewArea" class="hidden" style="margin-top: 16px;">
+          <div id="fileParseStatus" style="font-size: 0.92rem; color: var(--accent); font-weight: bold; margin-bottom: 12px;"></div>
+          <button type="button" id="uploadSaveBtn" class="btn-success">☁️ この内容でサーバーに保存・公開する</button>
+          <div id="uploadSaveStatus" class="status-msg"></div>
+          <div id="uploadSaveSuccess" class="success-msg"></div>
+          <div id="uploadSaveError" class="error-msg"></div>
+        </div>
       </div>
 
-      <div id="dropZone" class="drop-zone">
-        <div style="font-size: 2rem;">📄</div>
-        <strong>Excelファイル（.xlsx）をここにドラッグ＆ドロップ</strong>
-        <p>またはクリックしてファイルを選択してください</p>
-        <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" />
-      </div>
+      <!-- 個票閲覧カード -->
+      <div id="individualCard" class="card tabbed-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h2>📋 授業アンケート個票閲覧</h2>
+          <button type="button" id="reloadDataBtn" class="btn-outline" style="font-size: 0.85rem; padding: 6px 12px;">🔄 最新データを再取得</button>
+        </div>
 
-      <div id="parsedPreviewArea" class="hidden" style="margin-top: 16px;">
-        <div id="fileParseStatus" style="font-size: 0.92rem; color: var(--accent); margin-bottom: 12px;"></div>
-        <button type="button" id="uploadSaveBtn" class="btn-success">☁️ この内容でサーバーに保存・公開する</button>
-        <div id="uploadSaveStatus" class="status-msg"></div>
-        <div id="uploadSaveSuccess" class="success-msg"></div>
-        <div id="uploadSaveError" class="error-msg"></div>
+        <!-- 一覧から遷移した際のバナー -->
+        <div id="adminDrilldownBanner" class="admin-viewing-banner hidden" style="margin-top: 12px;">
+          <span id="adminDrilldownText">👁️ 管理者閲覧モード：全アンケート一覧から選択された個票を表示中</span>
+          <button type="button" id="backToMyDataBtn" class="btn-outline" style="font-size: 0.82rem; padding: 4px 12px;">自分の担当授業に戻る</button>
+        </div>
+
+        <p id="individualSubDesc" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
+          ログイン中の教員（<strong id="inlineTeacherName"></strong>）が担当しているクラス・科目の集計結果が表示されます。
+        </p>
+
+        <div id="dataLoadStatus" class="status-msg" style="margin-top: 12px;"></div>
+        <div id="noDataMsg" class="error-msg hidden" style="margin-top: 12px;"></div>
+
+        <!-- アンケート回・クラス・科目選択 -->
+        <div id="selectorControls" class="selector-grid hidden">
+          <div class="form-group">
+            <label for="surveySelect">対象アンケート</label>
+            <select id="surveySelect"></select>
+          </div>
+          <div class="form-group">
+            <label for="classSelect">クラス名</label>
+            <select id="classSelect"></select>
+          </div>
+          <div class="form-group">
+            <label for="subjectSelect">科目名</label>
+            <select id="subjectSelect"></select>
+          </div>
+        </div>
+
+        <!-- 集計結果表示 -->
+        <div id="resultArea" class="hidden">
+          <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;" />
+
+          <div class="notice-box">
+            🔒 匿名保護のため、生徒氏名・出席番号などの個人情報は除外し、回答順をランダムにシャッフルした上で点数の高い順に並べ替えています。
+          </div>
+
+          <div class="summary-bar">
+            <div class="stat-item">
+              <span class="stat-label">対象クラス・科目（担当教員）</span>
+              <span id="statTarget" style="font-size: 1.15rem; font-weight: bold;">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">有効回答数</span>
+              <span id="statCount" class="stat-value">0 名</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">満足度 平均点（5点満点）</span>
+              <span id="statAvg" class="stat-value avg">-</span>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">No.</th>
+                <th style="width: 110px;">満足度</th>
+                <th>授業に対するコメント</th>
+              </tr>
+            </thead>
+            <tbody id="resultTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- 全教員共通：担当授業アンケート閲覧パネル -->
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <h2>📋 担当授業アンケート結果の閲覧</h2>
-        <button type="button" id="reloadDataBtn" class="btn-outline" style="font-size: 0.85rem; padding: 6px 12px;">🔄 最新データを再取得</button>
-      </div>
-      <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
-        ログイン中の教員（<strong id="inlineTeacherName"></strong>）が担当しているクラス・科目の集計結果のみが表示されます。
-      </p>
-
-      <div id="dataLoadStatus" class="status-msg" style="margin-top: 12px;"></div>
-      <div id="noDataMsg" class="error-msg hidden" style="margin-top: 12px;"></div>
-
-      <!-- アンケート回・クラス・科目選択 -->
-      <div id="selectorControls" class="selector-grid hidden">
-        <div class="form-group">
-          <label for="surveySelect">対象アンケート</label>
-          <select id="surveySelect"></select>
+    <!-- ========================================== -->
+    <!-- タブ2：全アンケート一覧（admin0 / admin2 限定） -->
+    <!-- ========================================== -->
+    <div id="tabPanelOverview" class="hidden">
+      <div class="card tabbed-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h2>📈 全アンケート一覧（平均点・学年別平均）</h2>
+          <button type="button" id="reloadOverviewBtn" class="btn-outline" style="font-size: 0.85rem; padding: 6px 12px;">🔄 最新データを再取得</button>
         </div>
-        <div class="form-group">
-          <label for="classSelect">クラス名</label>
-          <select id="classSelect"></select>
-        </div>
-        <div class="form-group">
-          <label for="subjectSelect">科目名</label>
-          <select id="subjectSelect"></select>
-        </div>
-      </div>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
+          一覧では平均点のみ表示されます。<strong>各科目の行をクリックすると、その授業の個票画面（コメント詳細）へ移動します。</strong>
+        </p>
 
-      <!-- 集計結果表示 -->
-      <div id="resultArea" class="hidden">
-        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;" />
-
-        <div class="notice-box">
-          🔒 匿名保護のため、生徒氏名・出席番号などの個人情報は除外し、回答順をランダムにシャッフルした上で点数の高い順に並べ替えています。
-        </div>
-
-        <div class="summary-bar">
-          <div class="stat-item">
-            <span class="stat-label">対象クラス・科目</span>
-            <span id="statTarget" style="font-size: 1.15rem; font-weight: bold;">-</span>
+        <div class="selector-grid" style="grid-template-columns: 1.5fr 1fr; margin-top: 16px;">
+          <div class="form-group">
+            <label for="overviewSurveySelect">対象アンケート</label>
+            <select id="overviewSurveySelect"></select>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">有効回答数</span>
-            <span id="statCount" class="stat-value">0 名</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">満足度 平均点（5点満点）</span>
-            <span id="statAvg" class="stat-value avg">-</span>
+          <div class="form-group">
+            <label for="overviewGradeFilter">学年絞り込み</label>
+            <select id="overviewGradeFilter">
+              <option value="ALL">すべての学年を表示</option>
+            </select>
           </div>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>満足度（点数）</th>
-              <th>授業に対するコメント</th>
-            </tr>
-          </thead>
-          <tbody id="resultTableBody"></tbody>
-        </table>
+        <!-- 学年別平均点サマリー -->
+        <div id="gradeSummarySection" class="hidden">
+          <h3 style="font-size: 1rem; color: var(--text-main); margin-top: 8px;">🏫 学年別 満足度平均点</h3>
+          <div id="gradeGrid" class="grade-grid"></div>
+        </div>
+
+        <!-- 科目一覧テーブル -->
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>学年</th>
+                <th>クラス名</th>
+                <th>科目名</th>
+                <th>担当教員</th>
+                <th>回答数</th>
+                <th>満足度平均</th>
+                <th style="width: 90px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="overviewTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- タブ3：ユーザー一覧管理（admin0 限定） -->
+    <!-- ========================================== -->
+    <div id="tabPanelUsers" class="hidden">
+      <div class="card tabbed-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h2>👥 ユーザー一覧管理（管理者0専用）</h2>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" id="reloadUsersBtn" class="btn-outline" style="font-size: 0.85rem;">🔄 再読み込み</button>
+            <button type="button" id="addUserRowBtn" class="btn-primary" style="font-size: 0.85rem;">＋ 新規ユーザー追加</button>
+          </div>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
+          教員マスターのユーザーID・パスワード・教員名・権限・アンケート表記を直接編集できます。編集後は必ず「変更を保存する」を押してください。
+        </p>
+
+        <div id="usersLoadStatus" class="status-msg" style="margin-top: 10px;"></div>
+        <div id="usersSaveSuccess" class="success-msg"></div>
+        <div id="usersSaveError" class="error-msg"></div>
+
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table class="user-edit-table">
+            <thead>
+              <tr>
+                <th style="min-width: 110px;">ユーザーID</th>
+                <th style="min-width: 110px;">パスワード</th>
+                <th style="min-width: 140px;">教員名</th>
+                <th style="min-width: 165px;">権限</th>
+                <th style="min-width: 140px;">アンケート表記</th>
+                <th style="width: 70px;">削除</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+          <button type="button" id="saveUsersBtn" class="btn-success" style="padding: 10px 24px;">💾 ユーザー一覧の変更を保存する</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- パスワード変更モーダル -->
+  <div id="passwordModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h3 style="margin-bottom: 12px; color: var(--text-main);">🔑 パスワードの変更</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        ログイン中のアカウント（<strong id="modalTeacherName"></strong>）のパスワードを変更します。
+      </p>
+      <div class="form-group">
+        <label for="currentPassInput">現在のパスワード</label>
+        <input type="password" id="currentPassInput" placeholder="現在のパスワード" />
+      </div>
+      <div class="form-group">
+        <label for="newPassInput">新しいパスワード</label>
+        <input type="password" id="newPassInput" placeholder="新しいパスワード" />
+      </div>
+      <div class="form-group">
+        <label for="confirmPassInput">新しいパスワード（確認）</label>
+        <input type="password" id="confirmPassInput" placeholder="もう一度入力してください" />
+      </div>
+      <div id="passModalStatus" class="status-msg"></div>
+      <div id="passModalError" class="error-msg"></div>
+      <div id="passModalSuccess" class="success-msg"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+        <button type="button" id="closePassModalBtn" class="btn-outline">閉じる</button>
+        <button type="button" id="submitPassChangeBtn" class="btn-primary">変更する</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -466,18 +812,23 @@
       role: 'user'
     };
 
-    // 管理者アップロード用一時解析レコード
+    // データ保持用
     let stagedRecords = [];
-
-    // 閲覧用データ（GASから取得したログイン教員の担当分のみ）
     // mySurveys[surveyTitle][className][subjectName] = [{ score, comment }, ...]
     let mySurveys = {};
+    // allSurveys[surveyTitle][className][subjectName] = { teachers: '...', responses: [{ score, comment }, ...] }
+    let allSurveys = null;
+    // 現在個票画面で表示中のデータソース（'mine' または 'all'）
+    let currentViewSource = 'mine';
+    // ユーザー一覧管理データ
+    let userListCache = [];
 
     // DOM要素
     const loginView = document.getElementById('loginView');
+    const navTabs = document.getElementById('navTabs');
     const mainView = document.getElementById('mainView');
     const headerUserArea = document.getElementById('headerUserArea');
-    const adminBadge = document.getElementById('adminBadge');
+    const roleBadge = document.getElementById('roleBadge');
     const displayTeacherName = document.getElementById('displayTeacherName');
     const inlineTeacherName = document.getElementById('inlineTeacherName');
     const userIdInput = document.getElementById('userIdInput');
@@ -487,8 +838,17 @@
     const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    // 管理者DOM
+    // タブ関連
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabOverviewBtn = document.getElementById('tabOverviewBtn');
+    const tabUsersBtn = document.getElementById('tabUsersBtn');
+    const tabPanelIndividual = document.getElementById('tabPanelIndividual');
+    const tabPanelOverview = document.getElementById('tabPanelOverview');
+    const tabPanelUsers = document.getElementById('tabPanelUsers');
+
+    // 管理者アップロードDOM
     const adminUploadCard = document.getElementById('adminUploadCard');
+    const individualCard = document.getElementById('individualCard');
     const surveyTitleInput = document.getElementById('surveyTitleInput');
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -499,8 +859,12 @@
     const uploadSaveSuccess = document.getElementById('uploadSaveSuccess');
     const uploadSaveError = document.getElementById('uploadSaveError');
 
-    // 閲覧DOM
+    // 個票閲覧DOM
     const reloadDataBtn = document.getElementById('reloadDataBtn');
+    const adminDrilldownBanner = document.getElementById('adminDrilldownBanner');
+    const adminDrilldownText = document.getElementById('adminDrilldownText');
+    const backToMyDataBtn = document.getElementById('backToMyDataBtn');
+    const individualSubDesc = document.getElementById('individualSubDesc');
     const dataLoadStatus = document.getElementById('dataLoadStatus');
     const noDataMsg = document.getElementById('noDataMsg');
     const selectorControls = document.getElementById('selectorControls');
@@ -514,8 +878,38 @@
     const statAvg = document.getElementById('statAvg');
     const resultTableBody = document.getElementById('resultTableBody');
 
+    // 一覧画面DOM
+    const reloadOverviewBtn = document.getElementById('reloadOverviewBtn');
+    const overviewSurveySelect = document.getElementById('overviewSurveySelect');
+    const overviewGradeFilter = document.getElementById('overviewGradeFilter');
+    const gradeSummarySection = document.getElementById('gradeSummarySection');
+    const gradeGrid = document.getElementById('gradeGrid');
+    const overviewTableBody = document.getElementById('overviewTableBody');
+
+    // ユーザー管理DOM
+    const reloadUsersBtn = document.getElementById('reloadUsersBtn');
+    const addUserRowBtn = document.getElementById('addUserRowBtn');
+    const usersLoadStatus = document.getElementById('usersLoadStatus');
+    const usersSaveSuccess = document.getElementById('usersSaveSuccess');
+    const usersSaveError = document.getElementById('usersSaveError');
+    const usersTableBody = document.getElementById('usersTableBody');
+    const saveUsersBtn = document.getElementById('saveUsersBtn');
+
+    // パスワード変更モーダルDOM
+    const openPasswordModalBtn = document.getElementById('openPasswordModalBtn');
+    const passwordModal = document.getElementById('passwordModal');
+    const modalTeacherName = document.getElementById('modalTeacherName');
+    const currentPassInput = document.getElementById('currentPassInput');
+    const newPassInput = document.getElementById('newPassInput');
+    const confirmPassInput = document.getElementById('confirmPassInput');
+    const passModalStatus = document.getElementById('passModalStatus');
+    const passModalError = document.getElementById('passModalError');
+    const passModalSuccess = document.getElementById('passModalSuccess');
+    const closePassModalBtn = document.getElementById('closePassModalBtn');
+    const submitPassChangeBtn = document.getElementById('submitPassChangeBtn');
+
     // ==========================================
-    // 1. ログイン処理
+    // 共通通信関数
     // ==========================================
     async function callGas(payload) {
       const res = await fetch(GAS_WEB_APP_URL, {
@@ -532,6 +926,9 @@
       }
     }
 
+    // ==========================================
+    // 1. ログイン処理
+    // ==========================================
     async function executeLogin() {
       loginError.textContent = '';
       loginStatus.textContent = '';
@@ -597,16 +994,48 @@
       displayTeacherName.textContent = label;
       inlineTeacherName.textContent = label;
 
-      // 権限による画面切り替え（adminのみアップロードカードを表示）
-      if (sessionAuth.role === 'admin') {
-        adminBadge.classList.remove('hidden');
-        adminUploadCard.classList.remove('hidden');
+      const r = sessionAuth.role;
+      // 権限バッジ設定
+      roleBadge.className = 'role-badge';
+      if (r === 'admin0') {
+        roleBadge.textContent = '管理者0 (admin0)';
+        roleBadge.classList.add('role-admin0');
+      } else if (r === 'admin1') {
+        roleBadge.textContent = '管理者1 (admin1)';
+        roleBadge.classList.add('role-admin1');
+      } else if (r === 'admin2') {
+        roleBadge.textContent = '管理者2 (admin2)';
+        roleBadge.classList.add('role-admin2');
       } else {
-        adminBadge.classList.add('hidden');
-        adminUploadCard.classList.add('hidden');
+        roleBadge.classList.add('hidden');
       }
 
-      // サーバーから自分の担当データを自動取得
+      // 権限によるメニュー・カード表示制御
+      const canUpload = (r === 'admin0' || r === 'admin1');
+      const canOverview = (r === 'admin0' || r === 'admin2');
+      const canManageUsers = (r === 'admin0');
+
+      if (canUpload) {
+        adminUploadCard.classList.remove('hidden');
+        individualCard.classList.remove('tabbed-card');
+      } else {
+        adminUploadCard.classList.add('hidden');
+        individualCard.classList.add('tabbed-card');
+      }
+
+      if (canOverview || canManageUsers) {
+        navTabs.classList.remove('hidden');
+        mainView.classList.remove('no-tabs');
+        tabOverviewBtn.classList.toggle('hidden', !canOverview);
+        tabUsersBtn.classList.toggle('hidden', !canManageUsers);
+      } else {
+        navTabs.classList.add('hidden');
+        mainView.classList.add('no-tabs');
+      }
+
+      switchTab('individual');
+      currentViewSource = 'mine';
+      adminDrilldownBanner.classList.add('hidden');
       fetchMySurveyData();
     }
 
@@ -614,6 +1043,8 @@
       sessionAuth = { userId: '', password: '', teacherName: '', role: 'user' };
       stagedRecords = [];
       mySurveys = {};
+      allSurveys = null;
+      currentViewSource = 'mine';
       passwordInput.value = '';
       loginError.textContent = '';
       loginStatus.textContent = '';
@@ -621,13 +1052,101 @@
       selectorControls.classList.add('hidden');
       resultArea.classList.add('hidden');
       headerUserArea.classList.add('hidden');
+      navTabs.classList.add('hidden');
       adminUploadCard.classList.add('hidden');
       mainView.classList.add('hidden');
       loginView.classList.remove('hidden');
     });
 
     // ==========================================
-    // 2. 管理者専用：Excel解析＆サーバー保存処理
+    // タブ切り替え制御
+    // ==========================================
+    function switchTab(tabName) {
+      tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      tabPanelIndividual.classList.toggle('hidden', tabName !== 'individual');
+      tabPanelOverview.classList.toggle('hidden', tabName !== 'overview');
+      tabPanelUsers.classList.toggle('hidden', tabName !== 'users');
+
+      if (tabName === 'overview') {
+        buildOverviewUI();
+      } else if (tabName === 'users') {
+        fetchUsersList();
+      }
+    }
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // ==========================================
+    // 2. パスワード変更モーダル（機能1）
+    // ==========================================
+    openPasswordModalBtn.addEventListener('click', () => {
+      modalTeacherName.textContent = sessionAuth.teacherName;
+      currentPassInput.value = '';
+      newPassInput.value = '';
+      confirmPassInput.value = '';
+      passModalStatus.textContent = '';
+      passModalError.textContent = '';
+      passModalSuccess.textContent = '';
+      passwordModal.classList.remove('hidden');
+      currentPassInput.focus();
+    });
+
+    closePassModalBtn.addEventListener('click', () => {
+      passwordModal.classList.add('hidden');
+    });
+
+    submitPassChangeBtn.addEventListener('click', async () => {
+      passModalStatus.textContent = '';
+      passModalError.textContent = '';
+      passModalSuccess.textContent = '';
+
+      const curPass = currentPassInput.value.trim();
+      const newPass = newPassInput.value.trim();
+      const confPass = confirmPassInput.value.trim();
+
+      if (!curPass || !newPass || !confPass) {
+        passModalError.textContent = 'すべての項目を入力してください。';
+        return;
+      }
+      if (newPass !== confPass) {
+        passModalError.textContent = '新しいパスワード（確認）が一致しません。';
+        return;
+      }
+
+      submitPassChangeBtn.disabled = true;
+      passModalStatus.textContent = 'パスワードを更新しています...';
+
+      try {
+        const res = await callGas({
+          action: 'changePassword',
+          userId: sessionAuth.userId,
+          password: curPass,
+          newPassword: newPass
+        });
+        passModalStatus.textContent = '';
+        if (res.status === 'success') {
+          sessionAuth.password = newPass;
+          passModalSuccess.textContent = '✅ ' + res.message;
+          currentPassInput.value = '';
+          newPassInput.value = '';
+          confirmPassInput.value = '';
+        } else {
+          passModalError.textContent = res.message || '変更に失敗しました。';
+        }
+      } catch (err) {
+        passModalStatus.textContent = '';
+        passModalError.textContent = '通信エラー: ' + err.message;
+      } finally {
+        submitPassChangeBtn.disabled = false;
+      }
+    });
+
+    // ==========================================
+    // 3. 管理者専用：Excel解析＆サーバー保存処理
     // ==========================================
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => {
@@ -662,7 +1181,6 @@
         return;
       }
 
-      // ファイル名から拡張子を除いたものをデフォルトのアンケート名にセット（未入力時）
       if (!surveyTitleInput.value.trim()) {
         surveyTitleInput.value = file.name.replace(/\.[^/.]+$/, '');
       }
@@ -688,7 +1206,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // ワークブックを個人情報なしのフラットレコード配列へ変換
     function parseWorkbookToFlatRecords(workbook) {
       const records = [];
 
@@ -790,7 +1307,6 @@
         uploadSaveStatus.textContent = '';
         if (res.status === 'success') {
           uploadSaveSuccess.textContent = '🎉 ' + res.message;
-          // 保存完了後、自身の閲覧リストも最新に更新
           await fetchMySurveyData();
         } else {
           uploadSaveError.textContent = res.message || '保存に失敗しました。';
@@ -804,13 +1320,24 @@
     });
 
     // ==========================================
-    // 3. サーバーから自分の担当アンケートを取得・表示
+    // 4. アンケートデータ取得・個票表示（自分分 / 管理者ドリルダウン）
     // ==========================================
     reloadDataBtn.addEventListener('click', fetchMySurveyData);
+    reloadOverviewBtn.addEventListener('click', async () => {
+      await fetchMySurveyData();
+      buildOverviewUI();
+    });
+
+    backToMyDataBtn.addEventListener('click', () => {
+      currentViewSource = 'mine';
+      adminDrilldownBanner.classList.add('hidden');
+      individualSubDesc.classList.remove('hidden');
+      populateIndividualSelectors();
+    });
 
     async function fetchMySurveyData() {
       noDataMsg.classList.add('hidden');
-      dataLoadStatus.textContent = 'サーバーから担当授業のアンケートデータを取得しています...';
+      dataLoadStatus.textContent = 'サーバーからアンケートデータを取得しています...';
 
       try {
         const res = await callGas({
@@ -827,28 +1354,12 @@
         }
 
         mySurveys = res.surveys || {};
-        const availableSurveys = Object.keys(mySurveys);
+        allSurveys = res.allSurveys || null;
 
-        if (availableSurveys.length === 0) {
-          selectorControls.classList.add('hidden');
-          resultArea.classList.add('hidden');
-          noDataMsg.textContent = '現在閲覧できる担当授業のアンケートデータがありません。（管理者のアップロード待ち、または担当授業の一致データなし）';
-          noDataMsg.classList.remove('hidden');
-          return;
+        populateIndividualSelectors();
+        if (!tabPanelOverview.classList.contains('hidden')) {
+          buildOverviewUI();
         }
-
-        // アンケート選択プルダウン構築（最新登録順に表示）
-        surveySelect.innerHTML = '';
-        availableSurveys.reverse().forEach((title) => {
-          const opt = document.createElement('option');
-          opt.value = title;
-          opt.textContent = title;
-          surveySelect.appendChild(opt);
-        });
-
-        selectorControls.classList.remove('hidden');
-        updateClassOptions();
-
       } catch (err) {
         dataLoadStatus.textContent = '';
         noDataMsg.textContent = '通信エラー: ' + err.message;
@@ -856,9 +1367,45 @@
       }
     }
 
-    function updateClassOptions() {
+    function getActiveSurveyStore() {
+      return (currentViewSource === 'all' && allSurveys) ? allSurveys : mySurveys;
+    }
+
+    function populateIndividualSelectors(presetSurvey, presetClass, presetSubject) {
+      const store = getActiveSurveyStore();
+      const availableSurveys = Object.keys(store);
+
+      if (availableSurveys.length === 0) {
+        selectorControls.classList.add('hidden');
+        resultArea.classList.add('hidden');
+        noDataMsg.textContent = currentViewSource === 'mine'
+          ? '現在閲覧できる担当授業のアンケートデータがありません。（「全アンケート一覧」権限をお持ちの場合は上部タブから全授業を閲覧できます）'
+          : '登録されているアンケートデータがありません。';
+        noDataMsg.classList.remove('hidden');
+        return;
+      }
+
+      noDataMsg.classList.add('hidden');
+      surveySelect.innerHTML = '';
+      availableSurveys.slice().reverse().forEach((title) => {
+        const opt = document.createElement('option');
+        opt.value = title;
+        opt.textContent = title;
+        surveySelect.appendChild(opt);
+      });
+
+      if (presetSurvey && store[presetSurvey]) {
+        surveySelect.value = presetSurvey;
+      }
+
+      selectorControls.classList.remove('hidden');
+      updateClassOptions(presetClass, presetSubject);
+    }
+
+    function updateClassOptions(presetClass, presetSubject) {
+      const store = getActiveSurveyStore();
       const selectedSurvey = surveySelect.value;
-      const classesObj = mySurveys[selectedSurvey] || {};
+      const classesObj = store[selectedSurvey] || {};
       const classNames = Object.keys(classesObj);
 
       classSelect.innerHTML = '';
@@ -869,13 +1416,18 @@
         classSelect.appendChild(opt);
       });
 
-      updateSubjectOptions();
+      if (presetClass && classesObj[presetClass]) {
+        classSelect.value = presetClass;
+      }
+
+      updateSubjectOptions(presetSubject);
     }
 
-    function updateSubjectOptions() {
+    function updateSubjectOptions(presetSubject) {
+      const store = getActiveSurveyStore();
       const selectedSurvey = surveySelect.value;
       const selectedClass = classSelect.value;
-      const subjectsObj = (mySurveys[selectedSurvey] && mySurveys[selectedSurvey][selectedClass]) || {};
+      const subjectsObj = (store[selectedSurvey] && store[selectedSurvey][selectedClass]) || {};
       const subjectNames = Object.keys(subjectsObj);
 
       subjectSelect.innerHTML = '';
@@ -886,16 +1438,17 @@
         subjectSelect.appendChild(opt);
       });
 
+      if (presetSubject && subjectsObj[presetSubject]) {
+        subjectSelect.value = presetSubject;
+      }
+
       renderResults();
     }
 
-    surveySelect.addEventListener('change', updateClassOptions);
-    classSelect.addEventListener('change', updateSubjectOptions);
+    surveySelect.addEventListener('change', () => updateClassOptions());
+    classSelect.addEventListener('change', () => updateSubjectOptions());
     subjectSelect.addEventListener('change', renderResults);
 
-    // ==========================================
-    // 4. 匿名シャッフル ＋ 点数降順ソート ＆ 描画
-    // ==========================================
     function shuffleArray(array) {
       const arr = array.slice();
       for (let i = arr.length - 1; i > 0; i--) {
@@ -906,16 +1459,23 @@
     }
 
     function renderResults() {
+      const store = getActiveSurveyStore();
       const sTitle = surveySelect.value;
       const cls = classSelect.value;
       const subj = subjectSelect.value;
 
-      if (!sTitle || !cls || !subj || !mySurveys[sTitle] || !mySurveys[sTitle][cls] || !mySurveys[sTitle][cls][subj]) {
+      if (!sTitle || !cls || !subj || !store[sTitle] || !store[sTitle][cls] || !store[sTitle][cls][subj]) {
         resultArea.classList.add('hidden');
         return;
       }
 
-      const rawResponses = mySurveys[sTitle][cls][subj];
+      const entry = store[sTitle][cls][subj];
+      // mySurveysは配列、allSurveysは { teachers, responses } オブジェクト
+      const rawResponses = Array.isArray(entry) ? entry : (entry.responses || []);
+      const teacherLabel = Array.isArray(entry)
+        ? (sessionAuth.teacherName.endsWith('先生') ? sessionAuth.teacherName : sessionAuth.teacherName + '先生')
+        : (entry.teachers || '-');
+
       const shuffled = shuffleArray(rawResponses);
       const sorted = shuffled.sort((a, b) => b.score - a.score);
 
@@ -923,7 +1483,7 @@
       const sum = sorted.reduce((acc, item) => acc + item.score, 0);
       const avg = count > 0 ? (sum / count).toFixed(2) : '-';
 
-      statTarget.textContent = `${cls} ／ ${subj}`;
+      statTarget.textContent = `${cls} ／ ${subj}（${teacherLabel}）`;
       statCount.textContent = `${count} 名`;
       statAvg.textContent = count > 0 ? `${avg} 点` : '-';
 
@@ -935,8 +1495,7 @@
         tdNo.textContent = index + 1;
 
         const tdScore = document.createElement('td');
-        tdScore.className = 'score-cell';
-        tdScore.textContent = `★ ${item.score}`;
+        tdScore.innerHTML = `<span class="score-pill">★ ${item.score}</span>`;
 
         const tdComment = document.createElement('td');
         if (item.comment) {
@@ -952,6 +1511,316 @@
       });
 
       resultArea.classList.remove('hidden');
+    }
+
+    // ==========================================
+    // 5. 全アンケート一覧表示（機能3：admin0 / admin2）
+    // ==========================================
+    function extractGradeCode(className) {
+      const m = String(className || '').match(/^(M[1-3]|H[ⅠⅡⅢ1-3]|中[1-3]|高[1-3])/);
+      return m ? m[1] : 'その他';
+    }
+
+    function formatGradeLabel(code) {
+      const map = {
+        'M1': '中1 (M1)',
+        'M2': '中2 (M2)',
+        'M3': '中3 (M3)',
+        'HⅠ': '高1 (HⅠ)',
+        'H1': '高1 (H1)',
+        'HⅡ': '高2 (HⅡ)',
+        'H2': '高2 (H2)',
+        'HⅢ': '高3 (HⅢ)',
+        'H3': '高3 (H3)'
+      };
+      return map[code] || code;
+    }
+
+    function buildOverviewUI() {
+      if (!allSurveys) return;
+      const surveyTitles = Object.keys(allSurveys);
+      const prevSelected = overviewSurveySelect.value;
+
+      overviewSurveySelect.innerHTML = '';
+      if (surveyTitles.length === 0) {
+        gradeSummarySection.classList.add('hidden');
+        overviewTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">データがありません</td></tr>';
+        return;
+      }
+
+      surveyTitles.slice().reverse().forEach(title => {
+        const opt = document.createElement('option');
+        opt.value = title;
+        opt.textContent = title;
+        overviewSurveySelect.appendChild(opt);
+      });
+
+      if (prevSelected && allSurveys[prevSelected]) {
+        overviewSurveySelect.value = prevSelected;
+      }
+
+      renderOverviewContent();
+    }
+
+    overviewSurveySelect.addEventListener('change', () => {
+      overviewGradeFilter.value = 'ALL';
+      renderOverviewContent();
+    });
+    overviewGradeFilter.addEventListener('change', renderOverviewTableOnly);
+
+    let currentOverviewRows = [];
+
+    function renderOverviewContent() {
+      const sTitle = overviewSurveySelect.value;
+      const surveyObj = (allSurveys && allSurveys[sTitle]) || {};
+
+      // 学年別集計＆行リスト生成
+      const gradeStats = {}; // gradeCode -> { sum, count }
+      const gradeOrder = [];
+      currentOverviewRows = [];
+
+      Object.keys(surveyObj).forEach(cls => {
+        const gCode = extractGradeCode(cls);
+        if (!gradeStats[gCode]) {
+          gradeStats[gCode] = { sum: 0, count: 0 };
+          gradeOrder.push(gCode);
+        }
+
+        const subjectsObj = surveyObj[cls];
+        Object.keys(subjectsObj).forEach(subj => {
+          const info = subjectsObj[subj];
+          const resList = info.responses || [];
+          const cnt = resList.length;
+          const sum = resList.reduce((a, b) => a + b.score, 0);
+          const avg = cnt > 0 ? (sum / cnt) : 0;
+
+          gradeStats[gCode].sum += sum;
+          gradeStats[gCode].count += cnt;
+
+          currentOverviewRows.push({
+            surveyTitle: sTitle,
+            gradeCode: gCode,
+            cls: cls,
+            subj: subj,
+            teachers: info.teachers || '-',
+            count: cnt,
+            avg: avg
+          });
+        });
+      });
+
+      // 学年絞り込みプルダウン更新
+      const currentFilter = overviewGradeFilter.value;
+      overviewGradeFilter.innerHTML = '<option value="ALL">すべての学年を表示</option>';
+      gradeOrder.forEach(gCode => {
+        const opt = document.createElement('option');
+        opt.value = gCode;
+        opt.textContent = formatGradeLabel(gCode);
+        overviewGradeFilter.appendChild(opt);
+      });
+      if (currentFilter && (currentFilter === 'ALL' || gradeStats[currentFilter])) {
+        overviewGradeFilter.value = currentFilter;
+      }
+
+      // 学年別平均点カード描画
+      gradeGrid.innerHTML = '';
+      if (gradeOrder.length > 0) {
+        gradeSummarySection.classList.remove('hidden');
+        gradeOrder.forEach(gCode => {
+          const st = gradeStats[gCode];
+          const gAvg = st.count > 0 ? (st.sum / st.count).toFixed(2) : '-';
+          const card = document.createElement('div');
+          card.className = 'grade-card';
+          card.innerHTML = `
+            <div class="g-name">${formatGradeLabel(gCode)}</div>
+            <div class="g-avg">${gAvg !== '-' ? gAvg + ' 点' : '-'}</div>
+            <div class="g-sub">延べ回答 ${st.count.toLocaleString()} 件</div>
+          `;
+          gradeGrid.appendChild(card);
+        });
+      } else {
+        gradeSummarySection.classList.add('hidden');
+      }
+
+      renderOverviewTableOnly();
+    }
+
+    function renderOverviewTableOnly() {
+      const filterGrade = overviewGradeFilter.value;
+      const filtered = filterGrade === 'ALL'
+        ? currentOverviewRows
+        : currentOverviewRows.filter(r => r.gradeCode === filterGrade);
+
+      overviewTableBody.innerHTML = '';
+      if (filtered.length === 0) {
+        overviewTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">該当するデータがありません</td></tr>';
+        return;
+      }
+
+      filtered.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'clickable-row';
+        tr.title = 'クリックしてこの授業の個票（コメント含む）を表示';
+
+        const avgText = row.count > 0 ? `${row.avg.toFixed(2)} 点` : '-';
+
+        tr.innerHTML = `
+          <td>${formatGradeLabel(row.gradeCode)}</td>
+          <td><strong>${escapeHtml(row.cls)}</strong></td>
+          <td>${escapeHtml(row.subj)}</td>
+          <td>${escapeHtml(row.teachers)}</td>
+          <td>${row.count} 名</td>
+          <td><span class="score-pill">★ ${avgText}</span></td>
+          <td><button type="button" class="btn-primary" style="padding: 4px 10px; font-size: 0.8rem;">個票を見る</button></td>
+        `;
+
+        tr.addEventListener('click', () => {
+          openIndividualFromOverview(row.surveyTitle, row.cls, row.subj, row.teachers);
+        });
+
+        overviewTableBody.appendChild(tr);
+      });
+    }
+
+    function openIndividualFromOverview(sTitle, cls, subj, teachers) {
+      currentViewSource = 'all';
+      adminDrilldownBanner.classList.remove('hidden');
+      adminDrilldownText.textContent = `👁️ 管理者閲覧モード：【${cls} / ${subj}（${teachers}）】の個票を表示中`;
+      individualSubDesc.classList.add('hidden');
+
+      switchTab('individual');
+      populateIndividualSelectors(sTitle, cls, subj);
+    }
+
+    // ==========================================
+    // 6. ユーザー一覧管理（機能4：admin0 限定）
+    // ==========================================
+    reloadUsersBtn.addEventListener('click', fetchUsersList);
+
+    async function fetchUsersList() {
+      usersSaveSuccess.textContent = '';
+      usersSaveError.textContent = '';
+      usersLoadStatus.textContent = '教員マスターを読み込んでいます...';
+
+      try {
+        const res = await callGas({
+          action: 'getUsers',
+          userId: sessionAuth.userId,
+          password: sessionAuth.password
+        });
+        usersLoadStatus.textContent = '';
+        if (res.status === 'success') {
+          userListCache = res.users || [];
+          renderUsersTable();
+        } else {
+          usersSaveError.textContent = res.message || '取得に失敗しました。';
+        }
+      } catch (err) {
+        usersLoadStatus.textContent = '';
+        usersSaveError.textContent = '通信エラー: ' + err.message;
+      }
+    }
+
+    function renderUsersTable() {
+      usersTableBody.innerHTML = '';
+      userListCache.forEach((u, idx) => {
+        const tr = document.createElement('tr');
+        const normR = (u.role === 'admin') ? 'admin0' : u.role;
+
+        tr.innerHTML = `
+          <td><input type="text" data-idx="${idx}" data-field="userId" value="${escapeHtml(u.userId)}" /></td>
+          <td><input type="text" data-idx="${idx}" data-field="password" value="${escapeHtml(u.password)}" /></td>
+          <td><input type="text" data-idx="${idx}" data-field="teacherName" value="${escapeHtml(u.teacherName)}" /></td>
+          <td>
+            <select data-idx="${idx}" data-field="role">
+              <option value="" ${normR === '' ? 'selected' : ''}>一般（空白）</option>
+              <option value="admin0" ${normR === 'admin0' ? 'selected' : ''}>admin0（管理者0）</option>
+              <option value="admin1" ${normR === 'admin1' ? 'selected' : ''}>admin1（管理者1）</option>
+              <option value="admin2" ${normR === 'admin2' ? 'selected' : ''}>admin2（管理者2）</option>
+            </select>
+          </td>
+          <td><input type="text" data-idx="${idx}" data-field="aliasRaw" value="${escapeHtml(u.aliasRaw)}" placeholder="任意" /></td>
+          <td><button type="button" class="btn-danger" data-del="${idx}">削除</button></td>
+        `;
+        usersTableBody.appendChild(tr);
+      });
+
+      // 入力変更イベントバインド
+      usersTableBody.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const i = Number(e.target.dataset.idx);
+          const f = e.target.dataset.field;
+          userListCache[i][f] = e.target.value;
+        });
+      });
+
+      // 削除ボタンバインド
+      usersTableBody.querySelectorAll('button[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const i = Number(e.target.dataset.del);
+          if (userListCache.length <= 1) {
+            alert('最低1名のユーザーが必要です。');
+            return;
+          }
+          userListCache.splice(i, 1);
+          renderUsersTable();
+        });
+      });
+    }
+
+    addUserRowBtn.addEventListener('click', () => {
+      userListCache.push({
+        userId: '',
+        password: String(Math.floor(1000 + Math.random() * 9000)),
+        teacherName: '',
+        role: '',
+        aliasRaw: ''
+      });
+      renderUsersTable();
+    });
+
+    saveUsersBtn.addEventListener('click', async () => {
+      usersSaveSuccess.textContent = '';
+      usersSaveError.textContent = '';
+      saveUsersBtn.disabled = true;
+      usersLoadStatus.textContent = 'ユーザーマスターを保存しています...';
+
+      const prevSelfId = sessionAuth.userId;
+
+      try {
+        const res = await callGas({
+          action: 'saveUsers',
+          userId: sessionAuth.userId,
+          password: sessionAuth.password,
+          users: userListCache
+        });
+
+        usersLoadStatus.textContent = '';
+        if (res.status === 'success') {
+          usersSaveSuccess.textContent = '✅ ' + res.message;
+          // 自分自身のIDやパスワードを変更した場合はセッション情報も追従させる
+          const selfUpdated = userListCache.find(u => u.userId === prevSelfId) || userListCache[0];
+          if (selfUpdated) {
+            sessionAuth.userId = selfUpdated.userId.trim();
+            sessionAuth.password = selfUpdated.password.trim();
+          }
+        } else {
+          usersSaveError.textContent = res.message || '保存に失敗しました。';
+        }
+      } catch (err) {
+        usersLoadStatus.textContent = '';
+        usersSaveError.textContent = '通信エラー: ' + err.message;
+      } finally {
+        saveUsersBtn.disabled = false;
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
   </script>
 </body>
