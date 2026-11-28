@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>授業アンケート集計くん v3.0.0</title>
+  <title>授業アンケート集計くん v3.1.0</title>
   <!-- Excel読み込み用ライブラリ (SheetJS) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <style>
@@ -163,8 +163,8 @@
       background-color: var(--danger-light);
       color: var(--danger);
       border: 1px solid #fecaca;
-      padding: 5px 10px;
-      font-size: 0.82rem;
+      padding: 6px 12px;
+      font-size: 0.85rem;
     }
 
     .btn-danger:hover:not(:disabled) {
@@ -185,7 +185,7 @@
 
     /* ナビゲーションタブ */
     .nav-tabs {
-      max-width: 1120px;
+      max-width: 1180px;
       margin: 20px auto 0;
       padding: 0 20px;
       display: flex;
@@ -216,7 +216,7 @@
     }
 
     .container {
-      max-width: 1120px;
+      max-width: 1180px;
       margin: 0 auto 40px;
       padding: 0 20px;
     }
@@ -332,6 +332,25 @@
       color: var(--text-muted);
       margin-top: 6px;
       font-size: 0.88rem;
+    }
+
+    /* 削除コントロールボックス */
+    .delete-survey-box {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .delete-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .delete-row select {
+      max-width: 420px;
     }
 
     /* 担当授業選択エリア */
@@ -569,12 +588,12 @@
   <div id="mainView" class="container hidden">
 
     <!-- ========================================== -->
-    <!-- タブ1：個票閲覧 ＋ 管理者アップロード画面 -->
+    <!-- タブ1：個票閲覧 ＋ 管理者アップロード・削除画面 -->
     <!-- ========================================== -->
     <div id="tabPanelIndividual">
-      <!-- 管理者（admin0 / admin1）専用：Excelアップロード＆サーバー保存パネル -->
+      <!-- 管理者（admin0 / admin1）専用：Excelアップロード・削除パネル -->
       <div id="adminUploadCard" class="card card-admin tabbed-card hidden">
-        <h2 style="color: var(--admin1-color); margin-bottom: 8px;">🛠️ データアップロード・登録（管理者メニュー）</h2>
+        <h2 style="color: var(--admin1-color); margin-bottom: 8px;">🛠️ データ管理（アップロード・削除）</h2>
         <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
           Excelから生徒の個人情報（氏名・ID・メール）を自動削除した上でサーバーへ保存します。未登録の教員は「教員マスター」へ自動追加されます。
         </p>
@@ -597,6 +616,18 @@
           <div id="uploadSaveStatus" class="status-msg"></div>
           <div id="uploadSaveSuccess" class="success-msg"></div>
           <div id="uploadSaveError" class="error-msg"></div>
+        </div>
+
+        <!-- 登録済みアンケート削除機能 -->
+        <div id="deleteSurveySection" class="delete-survey-box hidden">
+          <label style="font-size: 0.88rem; font-weight: bold; color: var(--text-muted);">🗑️ 登録済みアンケートの削除</label>
+          <div class="delete-row">
+            <select id="deleteSurveySelect"></select>
+            <button type="button" id="deleteSurveyBtn" class="btn-danger" style="padding: 9px 16px; font-size: 0.9rem;">選択したアンケートを削除</button>
+          </div>
+          <div id="deleteSurveyStatus" class="status-msg"></div>
+          <div id="deleteSurveySuccess" class="success-msg"></div>
+          <div id="deleteSurveyError" class="error-msg"></div>
         </div>
       </div>
 
@@ -674,7 +705,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- タブ2：全アンケート一覧（admin0 / admin2 限定） -->
+    <!-- タブ2：全アンケート一覧（admin0 / admin1 / admin2） -->
     <!-- ========================================== -->
     <div id="tabPanelOverview" class="hidden">
       <div class="card tabbed-card">
@@ -738,7 +769,7 @@
           </div>
         </div>
         <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
-          教員マスターのユーザーID・パスワード・教員名・権限・アンケート表記を直接編集できます。編集後は必ず「変更を保存する」を押してください。
+          教員マスターのユーザーID・パスワード・教員名・権限・アンケート表記（E列・F列）を直接編集できます。半角カナと全角カナは自動で同一視されます。
         </p>
 
         <div id="usersLoadStatus" class="status-msg" style="margin-top: 10px;"></div>
@@ -749,12 +780,13 @@
           <table class="user-edit-table">
             <thead>
               <tr>
-                <th style="min-width: 110px;">ユーザーID</th>
-                <th style="min-width: 110px;">パスワード</th>
-                <th style="min-width: 140px;">教員名</th>
-                <th style="min-width: 165px;">権限</th>
-                <th style="min-width: 140px;">アンケート表記</th>
-                <th style="width: 70px;">削除</th>
+                <th style="min-width: 100px;">ユーザーID</th>
+                <th style="min-width: 100px;">パスワード</th>
+                <th style="min-width: 135px;">教員名</th>
+                <th style="min-width: 160px;">権限</th>
+                <th style="min-width: 130px;">アンケート表記</th>
+                <th style="min-width: 130px;">アンケート表記2</th>
+                <th style="width: 65px;">削除</th>
               </tr>
             </thead>
             <tbody id="usersTableBody"></tbody>
@@ -804,7 +836,6 @@
     // ==========================================
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxpm3hnXuxGyvyH32bWQ3OMIEt9H1udrA3xa_zz8xkiDMfmdqwZfAT8zFpKv8YzmRbE/exec';
 
-    // セッション情報
     let sessionAuth = {
       userId: '',
       password: '',
@@ -812,18 +843,12 @@
       role: 'user'
     };
 
-    // データ保持用
     let stagedRecords = [];
-    // mySurveys[surveyTitle][className][subjectName] = [{ score, comment }, ...]
     let mySurveys = {};
-    // allSurveys[surveyTitle][className][subjectName] = { teachers: '...', responses: [{ score, comment }, ...] }
     let allSurveys = null;
-    // 現在個票画面で表示中のデータソース（'mine' または 'all'）
     let currentViewSource = 'mine';
-    // ユーザー一覧管理データ
     let userListCache = [];
 
-    // DOM要素
     const loginView = document.getElementById('loginView');
     const navTabs = document.getElementById('navTabs');
     const mainView = document.getElementById('mainView');
@@ -838,7 +863,6 @@
     const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    // タブ関連
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabOverviewBtn = document.getElementById('tabOverviewBtn');
     const tabUsersBtn = document.getElementById('tabUsersBtn');
@@ -846,7 +870,7 @@
     const tabPanelOverview = document.getElementById('tabPanelOverview');
     const tabPanelUsers = document.getElementById('tabPanelUsers');
 
-    // 管理者アップロードDOM
+    // 管理者アップロード・削除DOM
     const adminUploadCard = document.getElementById('adminUploadCard');
     const individualCard = document.getElementById('individualCard');
     const surveyTitleInput = document.getElementById('surveyTitleInput');
@@ -858,6 +882,13 @@
     const uploadSaveStatus = document.getElementById('uploadSaveStatus');
     const uploadSaveSuccess = document.getElementById('uploadSaveSuccess');
     const uploadSaveError = document.getElementById('uploadSaveError');
+
+    const deleteSurveySection = document.getElementById('deleteSurveySection');
+    const deleteSurveySelect = document.getElementById('deleteSurveySelect');
+    const deleteSurveyBtn = document.getElementById('deleteSurveyBtn');
+    const deleteSurveyStatus = document.getElementById('deleteSurveyStatus');
+    const deleteSurveySuccess = document.getElementById('deleteSurveySuccess');
+    const deleteSurveyError = document.getElementById('deleteSurveyError');
 
     // 個票閲覧DOM
     const reloadDataBtn = document.getElementById('reloadDataBtn');
@@ -908,9 +939,6 @@
     const closePassModalBtn = document.getElementById('closePassModalBtn');
     const submitPassChangeBtn = document.getElementById('submitPassChangeBtn');
 
-    // ==========================================
-    // 共通通信関数
-    // ==========================================
     async function callGas(payload) {
       const res = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
@@ -995,7 +1023,6 @@
       inlineTeacherName.textContent = label;
 
       const r = sessionAuth.role;
-      // 権限バッジ設定
       roleBadge.className = 'role-badge';
       if (r === 'admin0') {
         roleBadge.textContent = '管理者0 (admin0)';
@@ -1010,7 +1037,6 @@
         roleBadge.classList.add('hidden');
       }
 
-      // 権限によるメニュー・カード表示制御
       const canUpload = (r === 'admin0' || r === 'admin1');
       const canOverview = (r === 'admin0' || r === 'admin1' || r === 'admin2');
       const canManageUsers = (r === 'admin0');
@@ -1049,6 +1075,7 @@
       loginError.textContent = '';
       loginStatus.textContent = '';
       parsedPreviewArea.classList.add('hidden');
+      deleteSurveySection.classList.add('hidden');
       selectorControls.classList.add('hidden');
       resultArea.classList.add('hidden');
       headerUserArea.classList.add('hidden');
@@ -1058,9 +1085,6 @@
       loginView.classList.remove('hidden');
     });
 
-    // ==========================================
-    // タブ切り替え制御
-    // ==========================================
     function switchTab(tabName) {
       tabBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -1081,7 +1105,7 @@
     });
 
     // ==========================================
-    // 2. パスワード変更モーダル（機能1）
+    // 2. パスワード変更モーダル
     // ==========================================
     openPasswordModalBtn.addEventListener('click', () => {
       modalTeacherName.textContent = sessionAuth.teacherName;
@@ -1146,7 +1170,7 @@
     });
 
     // ==========================================
-    // 3. 管理者専用：Excel解析＆サーバー保存処理
+    // 3. 管理者専用：Excel解析・上書き確認・保存・削除
     // ==========================================
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => {
@@ -1292,6 +1316,14 @@
         return;
       }
 
+      // 同名アンケートがすでに存在する場合は上書き確認ダイアログを表示
+      if (allSurveys && Object.prototype.hasOwnProperty.call(allSurveys, surveyTitle)) {
+        const ok = confirm(`アンケート「${surveyTitle}」はすでにサーバーに登録されています。\n既存データを削除して新しい内容で上書きしますか？`);
+        if (!ok) {
+          return;
+        }
+      }
+
       uploadSaveBtn.disabled = true;
       uploadSaveStatus.textContent = 'サーバーへデータを送信・保存しています（数秒かかります）...';
 
@@ -1319,8 +1351,69 @@
       }
     });
 
+    // 削除用プルダウン更新（admin0 / admin1用）
+    function updateDeleteSurveyDropdown() {
+      const canUpload = (sessionAuth.role === 'admin0' || sessionAuth.role === 'admin1');
+      if (!canUpload || !allSurveys) {
+        deleteSurveySection.classList.add('hidden');
+        return;
+      }
+
+      const titles = Object.keys(allSurveys);
+      if (titles.length === 0) {
+        deleteSurveySection.classList.add('hidden');
+        return;
+      }
+
+      deleteSurveySelect.innerHTML = '';
+      titles.slice().reverse().forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        deleteSurveySelect.appendChild(opt);
+      });
+      deleteSurveySection.classList.remove('hidden');
+    }
+
+    deleteSurveyBtn.addEventListener('click', async () => {
+      deleteSurveyStatus.textContent = '';
+      deleteSurveySuccess.textContent = '';
+      deleteSurveyError.textContent = '';
+
+      const targetTitle = deleteSurveySelect.value;
+      if (!targetTitle) return;
+
+      const ok = confirm(`本当にアンケート「${targetTitle}」を削除しますか？\n※この操作は取り消せません。`);
+      if (!ok) return;
+
+      deleteSurveyBtn.disabled = true;
+      deleteSurveyStatus.textContent = 'サーバーからアンケートを削除しています...';
+
+      try {
+        const res = await callGas({
+          action: 'deleteSurvey',
+          userId: sessionAuth.userId,
+          password: sessionAuth.password,
+          surveyTitle: targetTitle
+        });
+
+        deleteSurveyStatus.textContent = '';
+        if (res.status === 'success') {
+          deleteSurveySuccess.textContent = '✅ ' + res.message;
+          await fetchMySurveyData();
+        } else {
+          deleteSurveyError.textContent = res.message || '削除に失敗しました。';
+        }
+      } catch (err) {
+        deleteSurveyStatus.textContent = '';
+        deleteSurveyError.textContent = '通信エラー: ' + err.message;
+      } finally {
+        deleteSurveyBtn.disabled = false;
+      }
+    });
+
     // ==========================================
-    // 4. アンケートデータ取得・個票表示（自分分 / 管理者ドリルダウン）
+    // 4. アンケートデータ取得・個票表示
     // ==========================================
     reloadDataBtn.addEventListener('click', fetchMySurveyData);
     reloadOverviewBtn.addEventListener('click', async () => {
@@ -1356,6 +1449,7 @@
         mySurveys = res.surveys || {};
         allSurveys = res.allSurveys || null;
 
+        updateDeleteSurveyDropdown();
         populateIndividualSelectors();
         if (!tabPanelOverview.classList.contains('hidden')) {
           buildOverviewUI();
@@ -1470,7 +1564,6 @@
       }
 
       const entry = store[sTitle][cls][subj];
-      // mySurveysは配列、allSurveysは { teachers, responses } オブジェクト
       const rawResponses = Array.isArray(entry) ? entry : (entry.responses || []);
       const teacherLabel = Array.isArray(entry)
         ? (sessionAuth.teacherName.endsWith('先生') ? sessionAuth.teacherName : sessionAuth.teacherName + '先生')
@@ -1514,7 +1607,7 @@
     }
 
     // ==========================================
-    // 5. 全アンケート一覧表示（機能3：admin0 / admin2）
+    // 5. 全アンケート一覧表示
     // ==========================================
     function extractGradeCode(className) {
       const m = String(className || '').match(/^(M[1-3]|H[ⅠⅡⅢ1-3]|中[1-3]|高[1-3])/);
@@ -1574,8 +1667,7 @@
       const sTitle = overviewSurveySelect.value;
       const surveyObj = (allSurveys && allSurveys[sTitle]) || {};
 
-      // 学年別集計＆行リスト生成
-      const gradeStats = {}; // gradeCode -> { sum, count }
+      const gradeStats = {};
       const gradeOrder = [];
       currentOverviewRows = [];
 
@@ -1609,7 +1701,6 @@
         });
       });
 
-      // 学年絞り込みプルダウン更新
       const currentFilter = overviewGradeFilter.value;
       overviewGradeFilter.innerHTML = '<option value="ALL">すべての学年を表示</option>';
       gradeOrder.forEach(gCode => {
@@ -1622,7 +1713,6 @@
         overviewGradeFilter.value = currentFilter;
       }
 
-      // 学年別平均点カード描画
       gradeGrid.innerHTML = '';
       if (gradeOrder.length > 0) {
         gradeSummarySection.classList.remove('hidden');
@@ -1693,7 +1783,7 @@
     }
 
     // ==========================================
-    // 6. ユーザー一覧管理（機能4：admin0 限定）
+    // 6. ユーザー一覧管理（admin0 限定・F列アンケート表記2対応）
     // ==========================================
     reloadUsersBtn.addEventListener('click', fetchUsersList);
 
@@ -1739,13 +1829,13 @@
               <option value="admin2" ${normR === 'admin2' ? 'selected' : ''}>admin2（管理者2）</option>
             </select>
           </td>
-          <td><input type="text" data-idx="${idx}" data-field="aliasRaw" value="${escapeHtml(u.aliasRaw)}" placeholder="任意" /></td>
+          <td><input type="text" data-idx="${idx}" data-field="aliasRaw" value="${escapeHtml(u.aliasRaw)}" placeholder="表記1（任意）" /></td>
+          <td><input type="text" data-idx="${idx}" data-field="aliasRaw2" value="${escapeHtml(u.aliasRaw2 || '')}" placeholder="表記2（任意）" /></td>
           <td><button type="button" class="btn-danger" data-del="${idx}">削除</button></td>
         `;
         usersTableBody.appendChild(tr);
       });
 
-      // 入力変更イベントバインド
       usersTableBody.querySelectorAll('input, select').forEach(el => {
         el.addEventListener('change', (e) => {
           const i = Number(e.target.dataset.idx);
@@ -1754,7 +1844,6 @@
         });
       });
 
-      // 削除ボタンバインド
       usersTableBody.querySelectorAll('button[data-del]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const i = Number(e.target.dataset.del);
@@ -1774,7 +1863,8 @@
         password: String(Math.floor(1000 + Math.random() * 9000)),
         teacherName: '',
         role: '',
-        aliasRaw: ''
+        aliasRaw: '',
+        aliasRaw2: ''
       });
       renderUsersTable();
     });
@@ -1798,7 +1888,6 @@
         usersLoadStatus.textContent = '';
         if (res.status === 'success') {
           usersSaveSuccess.textContent = '✅ ' + res.message;
-          // 自分自身のIDやパスワードを変更した場合はセッション情報も追従させる
           const selfUpdated = userListCache.find(u => u.userId === prevSelfId) || userListCache[0];
           if (selfUpdated) {
             sessionAuth.userId = selfUpdated.userId.trim();
